@@ -23,7 +23,7 @@ jobs:
           sudo apt update
           sudo apt install -y gh
 
-      # 🔍 Debug GH_TOKEN
+      # Debug GH_TOKEN length
       - name: Debug GH_TOKEN
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -38,7 +38,14 @@ jobs:
         run: |
           echo "Fetching issues..."
 
-          issues=$(GH_TOKEN="${GH_TOKEN}" gh issue list --label auto --state open --json number --jq '.[].number' || true)
+          issues=$(GH_TOKEN="${GH_TOKEN}" gh issue list \
+            --label auto \
+            --state open \
+            --json number \
+            --jq '.[].number' || true)
+
+          echo "Issues found:"
+          echo "$issues"
 
           if [ -z "$issues" ]; then
             echo "found_issue=false" >> $GITHUB_OUTPUT
@@ -47,11 +54,22 @@ jobs:
 
           oldest_issue=$(echo "$issues" | head -n 1)
 
+          echo "Oldest issue: $oldest_issue"
+
           echo "issue_number=$oldest_issue" >> $GITHUB_OUTPUT
           echo "found_issue=true" >> $GITHUB_OUTPUT
 
-      # --- Assign Copilot ---
+      # --- Assign to Copilot bot ---
       - name: Assign Copilot
         if: steps.find_issue.outputs.found_issue == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          issue_number=${{ steps.find_issue.outputs.issue_number }}
+          echo "Assigning Copilot bot to issue #${issue_number}"
+
+          # Copilot bot user is: github-copilot-bot
+          GH_TOKEN="${GH_TOKEN}" gh issue edit "$issue_number" \
+            --add-assignee github-copilot-bot
+
+          echo "Done!"
