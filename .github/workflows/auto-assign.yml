@@ -7,36 +7,35 @@ on:
 
 permissions:
   issues: write
+  pull-requests: read
   contents: read
 
 jobs:
   assign:
     runs-on: ubuntu-latest
 
-    env:
-      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
     steps:
       - name: Check out repo
         uses: actions/checkout@v4
 
       - name: Install GitHub CLI
-        run: |
-          type -p curl >/dev/null || sudo apt install curl -y
-          curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | \
-            sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
-          sudo chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg
-          echo "deb [arch=$(dpkg --print-architecture) \
-          signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] \
-          https://cli.github.com/packages stable main" | \
-          sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null
-          sudo apt update
-          sudo apt install gh -y
+        uses: cli/cli-action@v2
 
+      # --- Debug GH_TOKEN ---
+      - name: Debug GH_TOKEN visibility
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "GH_TOKEN length: ${#GH_TOKEN}"
+
+      # --- Find oldest issue ---
       - name: Find oldest issue with label "auto"
         id: find_issue
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           echo "Fetching issues..."
+
           issues=$(gh issue list --label auto --state open --json number,title \
                     --jq '.[] | .number' || echo "")
 
@@ -51,8 +50,11 @@ jobs:
           echo "issue_number=$oldest_issue" >> $GITHUB_OUTPUT
           echo "found_issue=true" >> $GITHUB_OUTPUT
 
+      # --- Assign Copilot ---
       - name: Assign Copilot
         if: steps.find_issue.outputs.found_issue == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           echo "Assigning github-copilot to issue #${{ steps.find_issue.outputs.issue_number }}"
           gh issue edit "${{ steps.find_issue.outputs.issue_number }}" \
