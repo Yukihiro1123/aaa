@@ -30,18 +30,15 @@ jobs:
         run: |
           echo "GH_TOKEN length: ${#GH_TOKEN}"
 
-      # Authenticate GitHub CLI
-      - name: Authenticate gh
+      # --- Find issue ---
+      - name: Find oldest issue with label "auto"
+        id: find_issue
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          echo "$GH_TOKEN" | gh auth login --with-token
+          echo "Fetching issues..."
 
-      # Find issue
-      - name: Find oldest issue
-        id: find_issue
-        run: |
-          issues=$(gh issue list --label auto --state open --json number --jq '.[].number' || true)
+          issues=$(GH_TOKEN="${GH_TOKEN}" gh issue list --label auto --state open --json number --jq '.[].number' || true)
 
           if [ -z "$issues" ]; then
             echo "found_issue=false" >> $GITHUB_OUTPUT
@@ -53,9 +50,8 @@ jobs:
           echo "issue_number=$oldest_issue" >> $GITHUB_OUTPUT
           echo "found_issue=true" >> $GITHUB_OUTPUT
 
-      # Assign Copilot
+      # --- Assign Copilot ---
       - name: Assign Copilot
         if: steps.find_issue.outputs.found_issue == 'true'
-        run: |
-          gh issue edit "${{ steps.find_issue.outputs.issue_number }}" \
-            --add-assignee github-copilot
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
