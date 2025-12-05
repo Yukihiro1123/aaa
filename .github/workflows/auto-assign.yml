@@ -70,6 +70,6 @@ jobs:
 
           # Copilot bot user is: github-copilot-bot
           GH_TOKEN="${GH_TOKEN}" gh issue edit "$issue_number" \
-            --add-assignee "github-actions[bot]"
+            --add-assignee "Yukihiro1123"
 
           echo "Done!"
