@@ -2,12 +2,20 @@ name: Assign Copilot to nightly issue
 
 on:
   schedule:
-    - cron: "30 14 * * *"  # JST 23:30（UTC 14:30）
+    - cron: "30 14 * * *"  # JST 23:30
   workflow_dispatch:
+
+permissions:
+  issues: write
+  pull-requests: read
+  contents: read
 
 jobs:
   assign:
     runs-on: ubuntu-latest
+
+    env:
+      GH_TOKEN: ${{ github.token }}
 
     steps:
       - name: Check out repo
@@ -17,7 +25,7 @@ jobs:
         id: find_issue
         run: |
           issues=$(gh issue list --label auto --state open --json number,title \
-                    --jq '.[] | select(.title | contains("WIP") | not) | .number')
+                    --jq '.[] | .number')
 
           if [ -z "$issues" ]; then
             echo "No matching issues."
@@ -28,11 +36,3 @@ jobs:
           oldest_issue=$(echo "$issues" | head -n 1)
 
           echo "Oldest issue: $oldest_issue"
-          echo "issue_number=$oldest_issue" >> $GITHUB_OUTPUT
-          echo "found_issue=true" >> $GITHUB_OUTPUT
-
-      - name: Assign Copilot
-        if: steps.find_issue.outputs.found_issue == 'true'
-        run: |
-          gh issue edit "${{ steps.find_issue.outputs.issue_number }}" \
-            --add-assignee github-copilot
