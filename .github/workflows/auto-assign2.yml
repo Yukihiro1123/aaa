@@ -2,7 +2,8 @@ name: Assign Copilot to nightly issue
 
 on:
   schedule:
-    - cron: "0 22 * * *"  # JST 07:00
+    - cron: "0 13 * * 1-5"
+    - cron: "0 22 * * 6,0"
   workflow_dispatch:
 
 permissions:
