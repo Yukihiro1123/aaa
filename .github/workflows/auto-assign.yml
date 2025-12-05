@@ -21,7 +21,10 @@ jobs:
       - name: Check out repo
         uses: actions/checkout@v4
 
-      - name: Find oldest issue with label "auto" and no PR
+      - name: Install GitHub CLI
+        uses: cli/cli-action@v2
+
+      - name: Find oldest issue with label "auto"
         id: find_issue
         run: |
           echo "Fetching issues..."
@@ -36,7 +39,6 @@ jobs:
 
           oldest_issue=$(echo "$issues" | head -n 1)
 
-          echo "Oldest issue: $oldest_issue"
           echo "issue_number=$oldest_issue" >> $GITHUB_OUTPUT
           echo "found_issue=true" >> $GITHUB_OUTPUT
 
@@ -46,4 +48,3 @@ jobs:
           echo "Assigning github-copilot to issue #${{ steps.find_issue.outputs.issue_number }}"
           gh issue edit "${{ steps.find_issue.outputs.issue_number }}" \
             --add-assignee github-copilot
-          echo "Done!"
