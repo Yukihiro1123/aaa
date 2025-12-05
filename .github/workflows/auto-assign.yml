@@ -6,9 +6,8 @@ on:
   workflow_dispatch:
 
 permissions:
-  issues: write
-  pull-requests: read
   contents: read
+  issues: write
 
 jobs:
   assign:
@@ -18,29 +17,33 @@ jobs:
       - name: Check out repo
         uses: actions/checkout@v4
 
+      # Install GitHub CLI
       - name: Install GitHub CLI
-        uses: cli/cli-action@v2
+        run: |
+          sudo apt update
+          sudo apt install -y gh
 
-      # --- Debug GH_TOKEN ---
-      - name: Debug GH_TOKEN visibility
+      # 🔍 Debug GH_TOKEN
+      - name: Debug GH_TOKEN
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           echo "GH_TOKEN length: ${#GH_TOKEN}"
 
-      # --- Find oldest issue ---
-      - name: Find oldest issue with label "auto"
-        id: find_issue
+      # Authenticate GitHub CLI
+      - name: Authenticate gh
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          echo "Fetching issues..."
+          echo "$GH_TOKEN" | gh auth login --with-token
 
-          issues=$(gh issue list --label auto --state open --json number,title \
-                    --jq '.[] | .number' || echo "")
+      # Find issue
+      - name: Find oldest issue
+        id: find_issue
+        run: |
+          issues=$(gh issue list --label auto --state open --json number --jq '.[].number' || true)
 
           if [ -z "$issues" ]; then
-            echo "No matching issues."
             echo "found_issue=false" >> $GITHUB_OUTPUT
             exit 0
           fi
@@ -50,12 +53,9 @@ jobs:
           echo "issue_number=$oldest_issue" >> $GITHUB_OUTPUT
           echo "found_issue=true" >> $GITHUB_OUTPUT
 
-      # --- Assign Copilot ---
+      # Assign Copilot
       - name: Assign Copilot
         if: steps.find_issue.outputs.found_issue == 'true'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          echo "Assigning github-copilot to issue #${{ steps.find_issue.outputs.issue_number }}"
           gh issue edit "${{ steps.find_issue.outputs.issue_number }}" \
             --add-assignee github-copilot
