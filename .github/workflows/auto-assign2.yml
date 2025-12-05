@@ -1,4 +1,4 @@
-name: Assign Copilot to nightly issue
+name: Assign Copilot to do your overtime
 
 on:
   schedule:
