@@ -17,35 +17,21 @@ jobs:
       - name: Check out repo
         uses: actions/checkout@v4
 
-      # Install GitHub CLI
       - name: Install GitHub CLI
         run: |
           sudo apt update
           sudo apt install -y gh
 
-      # Debug GH_TOKEN length
-      - name: Debug GH_TOKEN
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          echo "GH_TOKEN length: ${#GH_TOKEN}"
-
-      # --- Find issue ---
       - name: Find oldest issue with label "auto"
         id: find_issue
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          echo "Fetching issues..."
-
-          issues=$(GH_TOKEN="${GH_TOKEN}" gh issue list \
+          issues=$(gh issue list \
             --label auto \
             --state open \
             --json number \
             --jq '.[].number' || true)
-
-          echo "Issues found:"
-          echo "$issues"
 
           if [ -z "$issues" ]; then
             echo "found_issue=false" >> $GITHUB_OUTPUT
@@ -54,22 +40,16 @@ jobs:
 
           oldest_issue=$(echo "$issues" | head -n 1)
 
-          echo "Oldest issue: $oldest_issue"
-
           echo "issue_number=$oldest_issue" >> $GITHUB_OUTPUT
           echo "found_issue=true" >> $GITHUB_OUTPUT
 
-      # --- Assign to Copilot bot ---
-      - name: Assign Copilot
+      - name: Assign to Copilot bot
         if: steps.find_issue.outputs.found_issue == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           issue_number=${{ steps.find_issue.outputs.issue_number }}
-          echo "Assigning Copilot bot to issue #${issue_number}"
 
-          # Copilot bot user is: github-copilot-bot
-          GH_TOKEN="${GH_TOKEN}" gh issue edit "$issue_number" \
+          # 実際には Copilot bot ではなく、自分に assign する版
+          gh issue edit "$issue_number" \
             --add-assignee "Yukihiro1123"
-
-          echo "Done!"
